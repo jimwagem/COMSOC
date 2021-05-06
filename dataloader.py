@@ -31,7 +31,7 @@ class RealDataLoader(data.Dataset):
         self.targets = []
         self.projects = []
         self.project_ids = []
-        with open(self.filename, 'r') as f:
+        with open(self.filename, 'r', encoding='utf8') as f:
             counter = 0
             for line in f:
                 line = line.strip('\n')
