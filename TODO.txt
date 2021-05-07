@@ -1,0 +1,4 @@
+List of things still to do:
+-Implement a function that maps an election to a set of winner given a budget (likely greedy rule)
+-Implement models for completing ballots
+-Implement ballot/election distance function
