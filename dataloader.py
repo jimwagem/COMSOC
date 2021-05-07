@@ -54,6 +54,7 @@ class RealDataLoader(data.Dataset):
                     self.targets.append(t)
 
                     # Dropout some percent of x tensors
+                    # IDEA: Possibly have different dropout probabilities
                     mask = torch.rand(len(self.projects))
                     zeros = torch.zeros(len(self.projects))
                     ones = torch.ones(len(self.projects))

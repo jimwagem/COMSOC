@@ -11,15 +11,19 @@ class Project():
             self.difficulty = difficulty
         
         # For each category, decide where the project belongs
+        # IDEA: difficulty per category
         if category_prior is None:
             category_prior = torch.tensor([0.5]*num_categories)
         self.categories = torch.bernoulli(category_prior)
     
     def understand(self):
+        # IDEA: voter side difficulty
         return torch.bernoulli(self.difficulty) == 0
 
 class Voter():
-    """ Voter object. Has a preference ranging from 0 to 1 for each category.""" 
+    """ Voter object. Has a preference ranging from 0 to 1 for each category."""
+
+    # IDEA: include a voter ignorance parameter.
     def __init__(self, num_categories):
         # Preference[i] is the probability that the voter likes category i
         self.preferences = torch.rand(num_categories)
