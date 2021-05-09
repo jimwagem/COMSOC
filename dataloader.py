@@ -65,6 +65,7 @@ class RealDataLoader(data.Dataset):
                 counter += 1
         self.x = torch.stack(self.x)
         self.targets = torch.stack(self.targets)
+        self.n_projects = len(self.projects)
 
     def __getitem__(self, idx):
         return self.x[idx], self.targets[idx]
