@@ -43,6 +43,7 @@ class SynthDataLoader(data.Dataset):
         self.num_categories = num_categories
         self.num_voters = num_voters
         self.num_projects = num_projects
+        self.n_projects = num_projects
         self.hold_election()
 
     # Create x / target tensors from pabulib file
