@@ -63,7 +63,9 @@ class RealDataLoader(data.Dataset):
                     self.x.append(t * mask)
 
                 counter += 1
+        self.x_list = self.x
         self.x = torch.stack(self.x)
+        self.targets_list = self.targets
         self.targets = torch.stack(self.targets)
         self.n_projects = len(self.projects)
 
