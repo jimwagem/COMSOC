@@ -12,13 +12,27 @@ def validate(model, val_dataset):
     loss_list = []
     num_correct = 0
     num_total = 0
+    num_filled_correct = 0
+    num_filled_total = 0
+
     for x, target in val_dataset:
         y = model(x)
+
         loss_list.append(criterion(y, target).item())
         correct = (y>0) == (x>0)
         num_correct += torch.sum(correct).item()
         num_total += len(x)
+
+        zeros = torch.zeros(target.shape)
+        ones = torch.ones(target.shape)
+
+        filled = torch.where(x == 0, ones, zeros)
+        filled_correct = filled*correct
+        num_filled_total += torch.sum(filled)
+        num_filled_correct += torch.sum(filled_correct)
+
     print(f'average validation loss: {np.mean(loss_list)}, accuracy: {num_correct/num_total:.4f}')
+    print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
     # TODO: Print election results
 
 def train(model, train_dataset, epochs=5, batch_size=1):
@@ -27,7 +41,6 @@ def train(model, train_dataset, epochs=5, batch_size=1):
 
     # Init Autoencoder
     criterion = nn.MSELoss()
-    
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     losses = []
@@ -59,7 +72,7 @@ if __name__ == '__main__':
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
     model = AutoEncoder(dataset.n_projects, [], dataset.n_projects)
-    train(model, train_dataset, epochs=20, batch_size=10)
+    train(model, train_dataset, epochs=25, batch_size=10)
     validate(model, val_dataset)
     # completed = model.complete_ballots(dataset.x)
     # print(completed)
