@@ -10,10 +10,14 @@ from dataloader import RealDataLoader
 def validate(model, val_dataset):
     criterion = nn.MSELoss()
     loss_list = []
+    # accuracy of total reconstruction
     num_correct = 0
     num_total = 0
+    # accuracy of missing reconstruction
     num_filled_correct = 0
     num_filled_total = 0
+    # accuracy of missing reconstruction if we always filled in -1
+    num_neg_ones_correct = 0
 
     for x, target in val_dataset:
         y = model(x)
@@ -31,15 +35,17 @@ def validate(model, val_dataset):
         num_filled_total += torch.sum(filled)
         num_filled_correct += torch.sum(filled_correct)
 
+        num_neg_ones_correct += torch.sum((target == -1)*filled)
+
     print(f'average validation loss: {np.mean(loss_list)}, accuracy: {num_correct/num_total:.4f}')
     print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
+    print(f'accuracy if only -1: {num_neg_ones_correct/num_filled_total:.4f}')
     # TODO: Print election results
 
 def train(model, train_dataset, epochs=5, batch_size=1):
     # Init dataset
     trainloader = data.DataLoader(dataset, batch_size=batch_size, shuffle = True)
 
-    # Init Autoencoder
     criterion = nn.MSELoss()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -67,7 +73,7 @@ def train(model, train_dataset, epochs=5, batch_size=1):
 if __name__ == '__main__':
     dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.25)
     num_ballots = len(dataset)
-    num_val = num_ballots//2
+    num_val = num_ballots//3
     num_train = num_ballots - num_val
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
