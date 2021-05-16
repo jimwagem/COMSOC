@@ -23,9 +23,9 @@ def validate(model, val_dataset):
         y = model(x)
 
         loss_list.append(criterion(y, target).item())
-        correct = (y>0) == (x>0)
+        correct = (y>0) == (target>0)
         num_correct += torch.sum(correct).item()
-        num_total += len(x)
+        num_total += len(target)
 
         zeros = torch.zeros(target.shape)
         ones = torch.ones(target.shape)
@@ -51,33 +51,36 @@ def train(model, train_dataset, epochs=5, batch_size=1):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     losses = []
     for i in range(epochs):
-        print('epoch', i)
+        print('epoch', i, end = ' ')
         for j, (x, target) in enumerate(trainloader):
-            if j % (2000//batch_size) == 0 and j > 0:
-                print('TRAIN LOSS:', torch.mean(torch.Tensor(losses)).item())
-                losses = []
+
             optimizer.zero_grad()
 
             # Forward
             y = model.forward(x)
-            loss = criterion(y, target)
+            zeros = torch.zeros(target.shape)
+            ones = torch.ones(target.shape)
+            filled = torch.where(x == 0, ones, zeros)
+            loss = criterion(y*filled, target*filled)
             # print(torch.sum(torch.max(torch.zeros(y.shape), y)).item(), torch.sum(torch.max(torch.zeros(y.shape), target)).item())
             losses.append(loss.item())
 
             # backward
             loss.backward()
             optimizer.step()
+        print('TRAIN LOSS:', torch.mean(torch.Tensor(losses)).item())
+        losses = []
 
     return model
 
 if __name__ == '__main__':
-    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.25)
+    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.1)
     num_ballots = len(dataset)
     num_val = num_ballots//3
     num_train = num_ballots - num_val
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
-    model = AutoEncoder(dataset.n_projects, [], dataset.n_projects)
+    model = AutoEncoder(dataset.n_projects, [75], 50)
     train(model, train_dataset, epochs=25, batch_size=10)
     validate(model, val_dataset)
     # completed = model.complete_ballots(dataset.x)
