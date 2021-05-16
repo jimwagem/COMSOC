@@ -16,7 +16,8 @@ class Encoder(nn.Module):
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
-        return self.layers(x)
+        x = self.layers(x)
+        return torch.tanh(x)
 
 class Decoder(nn.Module):
     def __init__(self, in_dim, h_dim_list, bottleneck_dim):
