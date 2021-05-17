@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.modules.batchnorm import BatchNorm1d
 
 class Encoder(nn.Module):
     def __init__(self, in_dim, h_dim_list, bottleneck_dim):
@@ -11,6 +12,7 @@ class Encoder(nn.Module):
         for i in range(len(dims)-1):
             layers.append(nn.Linear(dims[i], dims[i+1]))
             if i < len(dims)-2:
+                layers.append(BatchNorm1d(dims[i+1]))
                 layers.append(nn.ReLU())
         # Convert list to nn Sequential
         self.layers = nn.Sequential(*layers)
@@ -29,8 +31,11 @@ class Decoder(nn.Module):
         for i in range(len(dims)-1):
             layers.append(nn.Linear(dims[i], dims[i+1]))
             if i < len(dims)-2:
+                layers.append(BatchNorm1d(dims[i+1]))
                 layers.append(nn.ReLU())
         # Convert list to nn Sequential
+        layers.append(nn.Tanh())
+        print(layers)
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):

@@ -8,7 +8,7 @@ class Project():
         if difficulty is None:
             self.difficulty = torch.rand(1)
         else:
-            self.difficulty = difficulty
+            self.difficulty = torch.tensor(difficulty)
         
         # For each category, decide where the project belongs
         # IDEA: difficulty per category
@@ -49,13 +49,17 @@ class SynthDataLoader(data.Dataset):
     # Create x / target tensors from pabulib file
     def hold_election(self):
         self.voters = [Voter(self.num_categories) for _ in range(self.num_voters)]
-        self.projects = [Project(self.num_categories) for _ in range(self.num_projects)]
+        self.projects = [Project(self.num_categories, difficulty=0.25) for _ in range(self.num_projects)]
         zeros = torch.zeros(self.num_projects)
         ones = torch.ones(self.num_projects)
         self.x = []
         self.targets = []
-        
+
+        count=0
         for voter in self.voters:
+            count += 1
+            if count%100==0:
+                print(f'created {count} voters')
             # Ballot is reported approval/disapproval
             # Expert ballot is where a voter understands all projects
             ballot = []
@@ -77,8 +81,8 @@ class SynthDataLoader(data.Dataset):
             self.targets.append(expert_ballot)
             self.x.append(ballot)
 
-        self.x = torch.stack(self.x)
-        self.targets = torch.stack(self.targets)
+        self.x = torch.stack(self.x).float()
+        self.targets = torch.stack(self.targets).float()
 
     def __getitem__(self, idx):
         return self.x[idx], self.targets[idx]

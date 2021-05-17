@@ -19,9 +19,10 @@ class Project():
 
 
 class RealDataLoader(data.Dataset):
-    def __init__(self, filename, dropout = 0):
+    def __init__(self, filename, dropout = 0, mask_per_ballot=1):
         self.filename = filename
         self.dropout = dropout
+        self.mask_per_ballot = mask_per_ballot
         self.load_file()
 
     # Create x / target tensors from pabulib file
@@ -51,16 +52,17 @@ class RealDataLoader(data.Dataset):
                     t = -torch.ones(len(self.projects))
                     for vote in line.split(';')[4].split(','):
                         t[self.project_ids.index(int(vote))] = 1
-                    self.targets.append(t)
 
                     # Dropout some percent of x tensors
                     # IDEA: Possibly have different dropout probabilities
-                    mask = torch.rand(len(self.projects))
-                    zeros = torch.zeros(len(self.projects))
-                    ones = torch.ones(len(self.projects))
-                    mask = torch.where(mask < self.dropout, zeros, ones)
 
-                    self.x.append(t * mask)
+                    for _ in range(self.mask_per_ballot):
+                        mask = torch.rand(len(self.projects))
+                        zeros = torch.zeros(len(self.projects))
+                        ones = torch.ones(len(self.projects))
+                        mask = torch.where(mask < self.dropout, zeros, ones)
+                        self.targets.append(t)
+                        self.x.append(t * mask)
 
                 counter += 1
         self.x_list = self.x
