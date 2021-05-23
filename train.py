@@ -7,7 +7,9 @@ import time
 from autoencoder import AutoEncoder
 from dataloader import RealDataLoader
 
-def validate(model, val_dataset):
+from election import greedy_approval
+
+def validate(model, val_dataset, budget, project_costs):
     criterion = nn.MSELoss()
     loss_list = []
     # accuracy of total reconstruction
@@ -19,28 +21,46 @@ def validate(model, val_dataset):
     # accuracy of missing reconstruction if we always filled in -1
     num_neg_ones_correct = 0
 
+    real_ballots = []
     for x, target in val_dataset:
+        real_ballots.append(target)
+
         y = model(x)
 
-        loss_list.append(criterion(y, target).item())
+        zeros = torch.zeros(target.shape)
+        ones = torch.ones(target.shape)
+        filled = torch.where(x == 0, ones, zeros)
+
+        loss_list.append(criterion(y*filled, target*filled).item())
         correct = (y>0) == (target>0)
         num_correct += torch.sum(correct).item()
         num_total += len(target)
 
-        zeros = torch.zeros(target.shape)
-        ones = torch.ones(target.shape)
-
-        filled = torch.where(x == 0, ones, zeros)
         filled_correct = filled*correct
         num_filled_total += torch.sum(filled)
         num_filled_correct += torch.sum(filled_correct)
 
         num_neg_ones_correct += torch.sum((target == -1)*filled)
 
-    print(f'average validation loss: {np.mean(loss_list)}, accuracy: {num_correct/num_total:.4f}')
+    print(f'average validation loss: {np.mean(loss_list)}')
+    print(f'accuracy: {num_correct/num_total:.4f}')
     print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
     print(f'accuracy if only -1: {num_neg_ones_correct/num_filled_total:.4f}')
+
     # TODO: Print election results
+
+    # Get full validation dataset
+    full_x, full_target = zip(*[batch for batch in val_dataset])
+    full_x = torch.stack(full_x)
+    full_target = torch.stack(full_target)
+    # Predict targets
+    full_y = model.complete_ballots(full_x)
+
+    target_set = set([i.item() for i in greedy_approval(full_target, budget, project_costs)])
+    y_set = set([i.item() for i in greedy_approval(full_y, budget, project_costs)])
+    print(target_set.union(y_set))
+    print(target_set.intersection(y_set))
+
 
 def train(model, train_dataset, epochs=5, batch_size=1):
     # Init dataset
@@ -74,14 +94,15 @@ def train(model, train_dataset, epochs=5, batch_size=1):
     return model
 
 if __name__ == '__main__':
-    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.1)
+    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.75)
     num_ballots = len(dataset)
     num_val = num_ballots//3
     num_train = num_ballots - num_val
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
     model = AutoEncoder(dataset.n_projects, [75], 50)
-    train(model, train_dataset, epochs=25, batch_size=10)
-    validate(model, val_dataset)
+    train(model, train_dataset, epochs=1, batch_size=8)
+    project_costs = torch.Tensor([p.cost for p in dataset.projects])
+    validate(model, val_dataset, dataset.budget, project_costs)
     # completed = model.complete_ballots(dataset.x)
     # print(completed)

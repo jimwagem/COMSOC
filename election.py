@@ -17,7 +17,7 @@ def greedy_approval(ballots, budget, project_costs):
 
     spend_budget = 0
     accepted_projects = []
-    for project, cost in zip(indices, project_costs[ind]):
+    for project, cost in zip(indices, project_costs[indices]):
         if spend_budget + cost <= budget:
             accepted_projects.append(project)
             spend_budget += cost
@@ -30,7 +30,7 @@ def max_approval(ballots, budget, project_costs):
     num_voters, num_projects = ballots.shape
     assert len(project_costs) == num_projects
     project_votes = torch.sum(ballots, dim=0)
-    
+
     best_approval = 0
     best_projects = None
     project_set = set(range(num_projects))
@@ -44,8 +44,8 @@ def max_approval(ballots, budget, project_costs):
             best_approval = approval
             best_projects = projects
     return best_projects
-        
-        
+
+
     return accepted_projects
 
 def ballot_distance(ballot1, ballot2, L1=True):
@@ -54,4 +54,3 @@ def ballot_distance(ballot1, ballot2, L1=True):
         return torch.mean(torch.abs(diff))
     else:
         return torch.mean(diff*diff)
-    
