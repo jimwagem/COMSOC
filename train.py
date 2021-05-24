@@ -7,7 +7,23 @@ import time
 from synthdata import SynthDataLoader
 from autoencoder import AutoEncoder
 from dataloader import RealDataLoader
-from election import ballot_distance
+from election import ballot_distance, greedy_approval
+
+def election_accuracy(true_ballots, completed_ballots, budget, project_costs):
+    true_ap = greedy_approval(true_ballots, budget, project_costs)
+    completed_ap = greedy_approval(completed_ballots, budget, project_costs)
+    num_correct_projects=0
+    true_used_budget = 0
+    completed_correct_budget = 0
+    for t_project in true_ap:
+        true_used_budget += project_costs[t_project]
+        for c_project in completed_ap:
+            if c_project == t_project:
+                num_correct_projects += 1
+                completed_correct_budget += project_costs[c_project]
+    print(f'Project accuracy {num_correct_projects/len(true_ap):.4f}')
+    print(f'Budget accuracy {completed_correct_budget/true_ballots:.4f}')
+
 
 def validate(model, val_dataset, device='cpu'):
     criterion = nn.MSELoss()
@@ -48,13 +64,17 @@ def validate(model, val_dataset, device='cpu'):
     print(f'accuracy if only 1: {1 - num_neg_ones_correct/num_filled_total:.4f}')
     # TODO: Print election results
 
-def train(model, train_dataset, epochs=5, batch_size=1, device='cpu'):
+def train(model, dataset, epochs=5, batch_size=1, device='cpu', use_project_costs=True):
     # Init dataset
     trainloader = data.DataLoader(dataset, batch_size=batch_size, shuffle = True)
     model.to(device)
 
     criterion = nn.MSELoss()
 
+    if use_project_costs:
+        pc = dataset.project_costs
+    else:
+        pc = None
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     losses = []
     for i in range(epochs):
@@ -85,14 +105,14 @@ def train(model, train_dataset, epochs=5, batch_size=1, device='cpu'):
 if __name__ == '__main__':
     start=time.time()
     device='cuda'
-    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.25, mask_per_ballot=5)
-    # dataset = SynthDataLoader(30,10000,100)
+    # dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.25, mask_per_ballot=5)
+    dataset = SynthDataLoader(11,10000,100)
     num_ballots = len(dataset)
     num_val = num_ballots//3
     num_train = num_ballots - num_val
     train_dataset, val_dataset = data.random_split(dataset, [num_train,num_val])
 
-    model = AutoEncoder(dataset.n_projects, [70,50], 30)
+    model = AutoEncoder(dataset.n_projects, [70,50,40], 30)
     train(model, train_dataset, epochs=250, batch_size=32, device=device)
     validate(model, val_dataset, device)
     end=time.time()

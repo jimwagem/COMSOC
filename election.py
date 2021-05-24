@@ -17,7 +17,7 @@ def greedy_approval(ballots, budget, project_costs):
 
     spend_budget = 0
     accepted_projects = []
-    for project, cost in zip(indices, project_costs[ind]):
+    for project, cost in zip(indices, project_costs[indices]):
         if spend_budget + cost <= budget:
             accepted_projects.append(project)
             spend_budget += cost
@@ -48,11 +48,13 @@ def max_approval(ballots, budget, project_costs):
         
     return accepted_projects
 
-def ballot_distance(ballot1, ballot2, L1=True, mask=None):
+def ballot_distance(ballot1, ballot2, L1=True, mask=None, project_costs=None):
     diff = ballot1 - ballot2
     # The mask should be ones for the projects where you want the loss calculated
     if mask is not None:
         diff = diff*mask
+    if project_costs is not None:
+        diff = diff*project_costs
     if L1:
         return torch.mean(torch.abs(diff))
     else:

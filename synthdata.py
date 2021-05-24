@@ -39,12 +39,18 @@ class Voter():
 
 
 class SynthDataLoader(data.Dataset):
-    def __init__(self, num_categories, num_voters, num_projects):
+    def __init__(self, num_categories, num_voters, num_projects, budget=2000000, total_cost=4500000):
         self.num_categories = num_categories
         self.num_voters = num_voters
         self.num_projects = num_projects
         self.n_projects = num_projects
         self.hold_election()
+
+        # Decide project_costs.
+        project_costs = np.random.uniform(0.01, 1, size=(num_projects))
+        project_costs *= total_cost/np.sum(project_costs)
+        self.project_costs = torch.Tensor(project_costs)
+        self.budget = budget
 
     # Create x / target tensors from pabulib file
     def hold_election(self):
@@ -93,6 +99,7 @@ class SynthDataLoader(data.Dataset):
 if __name__ == '__main__':
     synthdata = SynthDataLoader(num_categories=3, num_voters=10, num_projects=5)
     train_loader = data.DataLoader(synthdata, batch_size=4)
+    print(synthdata.project_costs)
     for x, target in train_loader:
         print(x)
         print(target)
