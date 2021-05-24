@@ -5,7 +5,7 @@ def powerset(iterable):
     """powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
     From itertools website"""
     s = list(iterable)
-    return itertools.chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s)+1))
 
 def greedy_approval(ballots, budget, project_costs):
     """ Ballot is (num voters, num projects).
@@ -45,11 +45,12 @@ def max_approval(ballots, budget, project_costs):
             best_projects = projects
     return best_projects
 
-
-    return accepted_projects
-
-def ballot_distance(ballot1, ballot2, L1=True):
+def ballot_distance(ballot1, ballot2, L1=True, mask=None, project_costs=None):
     diff = ballot1 - ballot2
+    if mask is not None:
+        diff = diff*mask
+    if project_costs is not None:
+        diff = diff*project_costs
     if L1:
         return torch.mean(torch.abs(diff))
     else:

@@ -30,7 +30,6 @@ class RealDataLoader(data.Dataset):
         self.targets = []
         self.projects = []
         self.project_ids = []
-
         self.budget = 0
         self.project_costs = []
         with open(self.filename, 'r', encoding='utf8') as f:
@@ -45,6 +44,8 @@ class RealDataLoader(data.Dataset):
                 elif line == 'VOTES':
                     mode = 2
                     counter = 0
+                elif len(line) > 6 and line[:6]=="budget":
+                    self.budget = int(line[7:])
                 # Skip first line with labels
                 elif counter == 1:
                     pass
@@ -55,6 +56,7 @@ class RealDataLoader(data.Dataset):
                     p = Project(line)
                     self.projects.append(p)
                     self.project_ids.append(p.id)
+                    self.project_costs.append(p.cost)
                 elif mode == 2:
                     t = -torch.ones(len(self.projects))
                     for vote in line.split(';')[4].split(','):
@@ -77,7 +79,8 @@ class RealDataLoader(data.Dataset):
         self.targets_list = self.targets
         self.targets = torch.stack(self.targets)
         self.n_projects = len(self.projects)
-
+        self.project_costs = torch.Tensor(self.project_costs)
+        
     def __getitem__(self, idx):
         return self.x[idx], self.targets[idx]
 

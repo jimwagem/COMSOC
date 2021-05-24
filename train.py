@@ -7,15 +7,20 @@ import argparse
 
 from autoencoder import AutoEncoder
 from dataloader import RealDataLoader
-
+from election import ballot_distance
 from evaluation import evaluate_acc, evaluate_outcome
 
-def train(model, train_dataset, epochs=5, batch_size=1):
+def train(model, train_dataset, epochs=5, batch_size=1, use_project_costs=True):
     # Init dataset
     trainloader = data.DataLoader(dataset, batch_size=batch_size, shuffle = True)
 
     criterion = nn.MSELoss()
 
+    if use_project_costs:
+        pc = dataset.project_costs
+    else:
+        pc = None
+    
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     losses = []
     for i in range(epochs):
@@ -26,8 +31,10 @@ def train(model, train_dataset, epochs=5, batch_size=1):
             y = model.forward(x)
             zeros = torch.zeros(target.shape)
             ones = torch.ones(target.shape)
-            filled = torch.where(x == 0, ones, zeros)
-            loss = criterion(y*filled, target*filled)
+            # filled = torch.where(x == 0, ones, zeros)
+            # loss = criterion(y*filled, target*filled)
+            mask = 1 - torch.abs(x)
+            loss = ballot_distance(y, target, L1=True, mask=mask, project_costs=pc)
             # print(torch.sum(torch.max(torch.zeros(y.shape), y)).item(), torch.sum(torch.max(torch.zeros(y.shape), target)).item())
             losses.append(loss.item())
 
