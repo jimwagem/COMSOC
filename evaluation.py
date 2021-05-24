@@ -1,5 +1,4 @@
 import types
-from functools import partial
 
 import torch
 import torch.nn as nn
@@ -13,7 +12,7 @@ def val_dataset_incomplete(args):
     pass
 
 
-def evaluate_acc(model, val_dataset, train_dataset, nn_fraction):
+def evaluate_acc(model, val_dataset):
     criterion = nn.MSELoss()
     loss_list = []
     # accuracy of total reconstruction
@@ -24,22 +23,16 @@ def evaluate_acc(model, val_dataset, train_dataset, nn_fraction):
     num_filled_total = 0
     # accuracy of missing reconstruction if we always filled in -1
     num_neg_ones_correct = 0
-    val_dataset_incomplete = val_dataset.dataset.x_list
-    train_dataset_incomplete = train_dataset.dataset.x_list
-    total_incomplete = val_dataset_incomplete + train_dataset_incomplete
-    top_k = round(nn_fraction * len(val_dataset_incomplete))
 
     real_ballots = []
 
-    if isinstance(model, types.FunctionType):
-        partial_model = partial(model, incomplete_ballots=val_dataset_incomplete, top_k=top_k)
-    else:
-        partial_model = model
-
+    # counter = 0
     for x, target in val_dataset:
+        # counter += 1
+        # print(counter)
         real_ballots.append(target)
 
-        y = partial_model(x)
+        y = model(x)
 
         zeros = torch.zeros(target.shape)
         ones = torch.ones(target.shape)
@@ -61,16 +54,22 @@ def evaluate_acc(model, val_dataset, train_dataset, nn_fraction):
     print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
     print(f'accuracy if only -1: {num_neg_ones_correct/num_filled_total:.4f}')
 
-def evaluate_outcome(model, dataset, val_dataset):
+def evaluate_outcome(model, dataset, val_dataset, is_function=False):
     budget = dataset.budget
     project_costs = torch.Tensor([p.cost for p in dataset.projects])
 
     # Get full validation dataset
     full_x, full_target = zip(*[batch for batch in val_dataset])
     full_x = torch.stack(full_x)
+    if is_function:
+        full_y = []
+        for x in full_x:
+            full_y.append(model(x))
+        full_y = torch.stack(full_y)
+    else:
+        # Predict targets
+        full_y = model.complete_ballots(full_x)
     full_target = torch.stack(full_target)
-    # Predict targets
-    full_y = model.complete_ballots(full_x)
 
     target_set = set([i.item() for i in greedy_approval(full_target, budget, project_costs)])
     y_set = set([i.item() for i in greedy_approval(full_y, budget, project_costs)])

@@ -4,9 +4,9 @@ import random
 import numpy as np
 import torch
 from torch.utils import data
-
+from functools import partial
 from dataloader import RealDataLoader
-
+from evaluation import evaluate_acc, evaluate_outcome
 
 class MissingPreferenceError(Exception):
     def __init__(self):
@@ -101,10 +101,28 @@ def validate_baseline(val_dataset, top_k):
     print(f'accuracy on filled: {num_filled_correct / num_filled_total:.4f}')
     print(f'proportion -1: {prop_neg_one}')
 
+def get_partial_model(train_dataset, nn_fraction):
+    """Returns a single function that completes a given ballot."""
+    train_dataset_incomplete = train_dataset.dataset.x_list
+    top_k = round(nn_fraction * len(train_dataset_incomplete))
+    partial_model = partial(single_mi_completion, incomplete_ballots=train_dataset_incomplete, top_k=top_k)
+    return partial_model
+
+def validate_evaluation(dataset, nn_fraction=0.1):
+    """Validate using the model in evaluation.py"""
+    num_ballots = len(dataset)
+    num_val = num_ballots // 3
+    num_train = num_ballots - num_val
+    train_dataset, val_dataset = data.random_split(dataset, [num_train, num_val])
+    partial_model = get_partial_model(train_dataset=train_dataset, nn_fraction=nn_fraction)
+    evaluate_acc(partial_model, val_dataset=val_dataset)
+    evaluate_outcome(partial_model, dataset, val_dataset, is_function=True)
+
 
 if __name__ == '__main__':
     dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout=0.1)
-    top_k = 100
+    # ----------------evaluate using eval functions in this file--------------
+    # top_k = 100
     # complete_ballots = max_intersection_completion(dataset.x_list, top_k)
     # num_ballots = len(dataset)
     # num_val = num_ballots // 3
@@ -112,9 +130,13 @@ if __name__ == '__main__':
     # train_dataset, val_dataset = data.random_split(dataset, [num_train, num_val])
     # validate_baseline(val_dataset, top_k)
     # validate(single_mi_completion, val_dataset)
+
+    # ---------------evaluate using evaluation.py--------------
+    validate_evaluation(dataset)
+    # --------test-------------------
     candidates = [torch.tensor([1, 1, 1, 1, -1, -1, 1, -1]), torch.tensor([-1, -1, 1, 1, 1, -1, 1, 1]),
                   torch.tensor([-1, 1, 1, -1, -1, 1, -1, -1]), torch.tensor([1, 0, -1, 0, -1, -1, -1, 0])]
     ballot = torch.tensor([1, 1, 1, 1, 1, 0, 0, 0])
     print(single_mi_completion(ballot, candidates, top_k=3))
 
-    
+
