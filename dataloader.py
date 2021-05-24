@@ -17,7 +17,6 @@ class Project():
     def __str__(self):
         return str(self.id) + ': ' + self.name
 
-
 class RealDataLoader(data.Dataset):
     def __init__(self, filename, dropout = 0):
         self.filename = filename
@@ -31,18 +30,27 @@ class RealDataLoader(data.Dataset):
         self.targets = []
         self.projects = []
         self.project_ids = []
+
+        self.budget = 0
+        self.project_costs = []
         with open(self.filename, 'r', encoding='utf8') as f:
             counter = 0
             for line in f:
                 line = line.strip('\n')
+                words = line.split(';')
+                # Switch modes
                 if line == 'PROJECTS':
                     mode = 1
                     counter = 0
                 elif line == 'VOTES':
                     mode = 2
                     counter = 0
+                # Skip first line with labels
                 elif counter == 1:
                     pass
+                # Different modes
+                elif mode == 0 and words[0] == 'budget':
+                    self.budget = int(words[1])
                 elif mode == 1:
                     p = Project(line)
                     self.projects.append(p)
@@ -63,6 +71,7 @@ class RealDataLoader(data.Dataset):
                     self.x.append(t * mask)
 
                 counter += 1
+
         self.x_list = self.x
         self.x = torch.stack(self.x)
         self.targets_list = self.targets
