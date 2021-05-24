@@ -13,7 +13,7 @@ def greedy_approval(ballots, budget, project_costs):
     num_voters, num_projects = ballots.shape
     assert len(project_costs) == num_projects
     project_votes = torch.sum(ballots, dim=0)
-    sorted_votes, indices = torch.sort(project_votes)
+    sorted_votes, indices = torch.sort(project_votes, descending=True)
 
     spend_budget = 0
     accepted_projects = []
