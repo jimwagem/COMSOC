@@ -1,10 +1,19 @@
+import types
+from functools import partial
+
 import torch
 import torch.nn as nn
 import numpy as np
 
+from autoencoder import AutoEncoder
 from election import greedy_approval
 
-def evaluate_acc(model, val_dataset):
+
+def val_dataset_incomplete(args):
+    pass
+
+
+def evaluate_acc(model, val_dataset, train_dataset, nn_fraction):
     criterion = nn.MSELoss()
     loss_list = []
     # accuracy of total reconstruction
@@ -15,18 +24,28 @@ def evaluate_acc(model, val_dataset):
     num_filled_total = 0
     # accuracy of missing reconstruction if we always filled in -1
     num_neg_ones_correct = 0
+    val_dataset_incomplete = val_dataset.dataset.x_list
+    train_dataset_incomplete = train_dataset.dataset.x_list
+    total_incomplete = val_dataset_incomplete + train_dataset_incomplete
+    top_k = round(nn_fraction * len(val_dataset_incomplete))
 
     real_ballots = []
+
+    if isinstance(model, types.FunctionType):
+        partial_model = partial(model, incomplete_ballots=val_dataset_incomplete, top_k=top_k)
+    else:
+        partial_model = model
+
     for x, target in val_dataset:
         real_ballots.append(target)
 
-        y = model(x)
+        y = partial_model(x)
 
         zeros = torch.zeros(target.shape)
         ones = torch.ones(target.shape)
         filled = torch.where(x == 0, ones, zeros)
-
-        loss_list.append(criterion(y*filled, target*filled).item())
+        if isinstance(model, AutoEncoder):
+            loss_list.append(criterion(y*filled, target*filled).item())
         correct = (y>0) == (target>0)
         num_correct += torch.sum(correct).item()
         num_total += len(target)
