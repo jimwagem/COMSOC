@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.modules.batchnorm import BatchNorm1d
 
 class Encoder(nn.Module):
     def __init__(self, in_dim, h_dim_list, bottleneck_dim):
@@ -11,6 +12,7 @@ class Encoder(nn.Module):
         for i in range(len(dims)-1):
             layers.append(nn.Linear(dims[i], dims[i+1]))
             if i < len(dims)-2:
+                layers.append(BatchNorm1d(dims[i+1]))
                 layers.append(nn.ReLU())
         # Convert list to nn Sequential
         self.layers = nn.Sequential(*layers)
@@ -30,6 +32,7 @@ class Decoder(nn.Module):
         for i in range(len(dims)-1):
             layers.append(nn.Linear(dims[i], dims[i+1]))
             if i < len(dims)-2:
+                layers.append(BatchNorm1d(dims[i+1]))
                 layers.append(nn.ReLU())
         # Convert list to nn Sequential
         self.layers = nn.Sequential(*layers)
@@ -44,9 +47,16 @@ class AutoEncoder(nn.Module):
         self.decoder = Decoder(in_dim, h_dim_list, bottleneck_dim)
 
     def forward(self, x):
+        is_flat = (len(x.shape) == 1)
+        if is_flat:
+            # Add batch dimension
+            x = x.unsqueeze(dim=0)
         z = self.encoder(x)
         x_rec = self.decoder(z)
-        return torch.tanh(x_rec)
+        output = torch.tanh(x_rec)
+        if is_flat:
+            output = output.squeeze()
+        return output
 
     # Use trained model to replace zeros in batch of ballots
     def complete_ballots(self, ballots):

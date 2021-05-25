@@ -13,6 +13,9 @@ def val_dataset_incomplete(args):
 
 
 def evaluate_acc(model, val_dataset):
+    is_autoencoder = isinstance(model, AutoEncoder)
+    if is_autoencoder:
+        model.eval()
     criterion = nn.MSELoss()
     loss_list = []
     # accuracy of total reconstruction
@@ -37,7 +40,7 @@ def evaluate_acc(model, val_dataset):
         zeros = torch.zeros(target.shape)
         ones = torch.ones(target.shape)
         filled = torch.where(x == 0, ones, zeros)
-        if isinstance(model, AutoEncoder):
+        if is_autoencoder:
             loss_list.append(criterion(y*filled, target*filled).item())
         correct = (y>0) == (target>0)
         num_correct += torch.sum(correct).item()

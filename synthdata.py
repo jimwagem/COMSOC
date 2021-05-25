@@ -29,17 +29,19 @@ class Voter():
         self.preferences = torch.rand(num_categories)
         self.num_categories = num_categories
     
-    def approve(self, project):
+    def approve(self, project, num_samples=10, prior=0.5):
         """A voter approves of a project if it agrees with the majority of categories"""
         proj_categories = project.categories
         agree_probs = proj_categories*self.preferences + (1-proj_categories)*(1-self.preferences)
 
-        agreements = torch.bernoulli(agree_probs)
+        # agreements = torch.bernoulli(agree_probs)
+        agree_prob = torch.mean(agree_probs)
+        agreements = torch.bernoulli(torch.stack(num_samples*[agree_prob]))
         return torch.mean(agreements) >= 0.5
 
 
 class SynthDataLoader(data.Dataset):
-    def __init__(self, num_categories, num_voters, num_projects, budget=2000000, total_cost=4500000):
+    def __init__(self, num_categories, num_voters, num_projects, budget=2000000, total_cost=4500000, num_samples=10, prior=0.5, difficulty=None):
         self.num_categories = num_categories
         self.num_voters = num_voters
         self.num_projects = num_projects
@@ -51,11 +53,14 @@ class SynthDataLoader(data.Dataset):
         project_costs *= total_cost/np.sum(project_costs)
         self.project_costs = torch.Tensor(project_costs)
         self.budget = budget
+        self.num_samples=num_samples
+        self.prior=prior
+        self.difficulty = difficulty
 
     # Create x / target tensors from pabulib file
     def hold_election(self):
         self.voters = [Voter(self.num_categories) for _ in range(self.num_voters)]
-        self.projects = [Project(self.num_categories) for _ in range(self.num_projects)]
+        self.projects = [Project(self.num_categories, difficulty=self.difficulty) for _ in range(self.num_projects)]
         zeros = torch.zeros(self.num_projects)
         ones = torch.ones(self.num_projects)
         self.x = []
@@ -67,7 +72,7 @@ class SynthDataLoader(data.Dataset):
             ballot = []
             expert_ballot = []
             for project in self.projects:
-                if voter.approve(project):
+                if voter.approve(project, self.num_samples, self.prior):
                     opinion = 1
                 else:
                     opinion = -1
