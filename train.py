@@ -10,38 +10,33 @@ from dataloader import RealDataLoader
 from election import ballot_distance
 from evaluation import evaluate_acc, evaluate_outcome
 
-def train(model, train_dataset, epochs=5, batch_size=1, use_project_costs=True):
+def train(model, train_dataset, epochs=5, batch_size=1, use_project_costs=True, verbose = True, pc = None):
     # Init dataset
-    trainloader = data.DataLoader(dataset, batch_size=batch_size, shuffle = True)
-
+    trainloader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle = True)
     criterion = nn.MSELoss()
 
-    if use_project_costs:
-        pc = dataset.project_costs
-    else:
-        pc = None
-    
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     losses = []
     for i in range(epochs):
-        print('epoch', i, end = ' ')
+        if verbose:
+            print('epoch', i, end = ' ')
         for j, (x, target) in enumerate(trainloader):
             optimizer.zero_grad()
             # Forward
             y = model.forward(x)
-            zeros = torch.zeros(target.shape)
-            ones = torch.ones(target.shape)
-            # filled = torch.where(x == 0, ones, zeros)
-            # loss = criterion(y*filled, target*filled)
+
             mask = 1 - torch.abs(x)
-            loss = ballot_distance(y, target, L1=True, mask=mask, project_costs=pc)
+            #loss = criterion(y*mask, target*mask)
+            loss = ballot_distance(y, target, L1=False, mask=mask, project_costs=None)
             # print(torch.sum(torch.max(torch.zeros(y.shape), y)).item(), torch.sum(torch.max(torch.zeros(y.shape), target)).item())
             losses.append(loss.item())
 
             # backward
             loss.backward()
             optimizer.step()
-        print('TRAIN LOSS:', torch.mean(torch.Tensor(losses)).item())
+
+        if verbose:
+            print('TRAIN LOSS:', torch.mean(torch.Tensor(losses)).item())
         losses = []
 
     return model
@@ -57,12 +52,12 @@ if __name__ == '__main__':
 
     dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = args.dropout)
     num_ballots = len(dataset)
-    num_val = num_ballots//3
+    num_val = num_ballots//4
     num_train = num_ballots - num_val
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
     model = AutoEncoder(dataset.n_projects, [75], 50)
-    train(model, train_dataset, epochs=args.epochs, batch_size=8)
+    train(model, train_dataset, epochs=args.epochs, batch_size=8, pc = dataset.project_costs)
 
     evaluate_acc(model, val_dataset)
     evaluate_outcome(model, dataset, val_dataset)
