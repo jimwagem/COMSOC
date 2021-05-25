@@ -16,8 +16,8 @@ class Encoder(nn.Module):
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.layers(x)
-        return torch.tanh(x)
+        return self.layers(x)
+
 
 class Decoder(nn.Module):
     def __init__(self, in_dim, h_dim_list, bottleneck_dim):
@@ -46,7 +46,7 @@ class AutoEncoder(nn.Module):
     def forward(self, x):
         z = self.encoder(x)
         x_rec = self.decoder(z)
-        return x_rec
+        return torch.tanh(x_rec)
 
     # Use trained model to replace zeros in batch of ballots
     def complete_ballots(self, ballots):
