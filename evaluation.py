@@ -53,6 +53,7 @@ def evaluate_acc(model, val_dataset):
     print(f'accuracy: {num_correct/num_total:.4f}')
     print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
     print(f'accuracy if only -1: {num_neg_ones_correct/num_filled_total:.4f}')
+    return num_filled_correct/num_filled_total if num_filled_total > 0 else 1
 
 def evaluate_outcome(model, dataset, val_dataset, is_function=False):
     budget = dataset.budget
@@ -81,3 +82,4 @@ def evaluate_outcome(model, dataset, val_dataset, is_function=False):
     i_cost = sum([dataset.projects[id].cost for id in i])
 
     print(f'Allocated same: {i_cost}/{target_cost}, ({i_cost/target_cost:.3f})')
+    return i_cost/target_cost
