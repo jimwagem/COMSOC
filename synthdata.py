@@ -3,22 +3,15 @@ import torch
 import torch.utils.data as data
 
 class Project():
-    def __init__(self, num_categories, difficulty=None, category_prior=None):
+    def __init__(self, num_categories, cost, category_prior=None):
         # Difficulty is the probability that a voter is able to form an opinion on the project
-        if difficulty is None:
-            self.difficulty = torch.rand(1)
-        else:
-            self.difficulty = difficulty
         
+        self.cost=cost
         # For each category, decide where the project belongs
         # IDEA: difficulty per category
         if category_prior is None:
             category_prior = torch.tensor([0.5]*num_categories)
         self.categories = torch.bernoulli(category_prior)
-    
-    def understand(self):
-        # IDEA: voter side difficulty
-        return torch.bernoulli(self.difficulty) == 0
 
 class Voter():
     """ Voter object. Has a preference ranging from 0 to 1 for each category."""
@@ -41,12 +34,11 @@ class Voter():
 
 
 class SynthDataLoader(data.Dataset):
-    def __init__(self, num_categories, num_voters, num_projects, budget=2000000, total_cost=4500000, num_samples=10, prior=0.5, difficulty=None):
+    def __init__(self, num_categories, num_voters, num_projects, budget=2000000, total_cost=4500000, num_samples=11, prior=0.5, dropout = 0):
         self.num_categories = num_categories
         self.num_voters = num_voters
         self.num_projects = num_projects
         self.n_projects = num_projects
-        self.hold_election()
 
         # Decide project_costs.
         project_costs = np.random.uniform(0.01, 1, size=(num_projects))
@@ -55,42 +47,50 @@ class SynthDataLoader(data.Dataset):
         self.budget = budget
         self.num_samples=num_samples
         self.prior=prior
-        self.difficulty = difficulty
+        self.dropout = dropout
+        self.hold_election()
 
     # Create x / target tensors from pabulib file
     def hold_election(self):
         self.voters = [Voter(self.num_categories) for _ in range(self.num_voters)]
-        self.projects = [Project(self.num_categories, difficulty=self.difficulty) for _ in range(self.num_projects)]
-        zeros = torch.zeros(self.num_projects)
-        ones = torch.ones(self.num_projects)
-        self.x = []
+        self.projects = [Project(self.num_categories, cost=self.project_costs[i]) for i in range(self.num_projects)]
         self.targets = []
         
+        count = 0
         for voter in self.voters:
+            count += 1
+            if count%1000==0:
+                print(f'Creating voter {count}')
             # Ballot is reported approval/disapproval
             # Expert ballot is where a voter understands all projects
             ballot = []
             expert_ballot = []
             for project in self.projects:
                 if voter.approve(project, self.num_samples, self.prior):
-                    opinion = 1
+                    opinion = 1.0
                 else:
-                    opinion = -1
+                    opinion = -1.0
                 expert_ballot.append(opinion)
-                if project.understand():
-                    ballot.append(opinion)
-                else:
-                    # Voter does not understand project
-                    ballot.append(0)
+                ballot.append(opinion)
+                
             ballot = torch.tensor(ballot)
             expert_ballot = torch.tensor(expert_ballot)
 
             self.targets.append(expert_ballot)
-            self.x.append(ballot)
 
-        self.x = torch.stack(self.x)
         self.targets = torch.stack(self.targets)
+        self.create_x_from_dropout()
+    
+    def create_x_from_dropout(self):
+        # Dropout some percent of x tensors
+        # IDEA: Possibly have different dropout probabilities
 
+        mask = torch.rand(self.targets.shape)
+        zeros = torch.zeros(mask.shape)
+        ones = torch.ones(mask.shape)
+        mask = torch.where(mask < self.dropout, zeros, ones)
+        self.x = self.targets * mask
+    
     def __getitem__(self, idx):
         return self.x[idx], self.targets[idx]
 

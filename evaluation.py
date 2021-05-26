@@ -12,7 +12,7 @@ def val_dataset_incomplete(args):
     pass
 
 
-def evaluate_acc(model, val_dataset):
+def evaluate_acc(model, val_dataset, verbose=True):
     is_autoencoder = isinstance(model, AutoEncoder)
     if is_autoencoder:
         model.eval()
@@ -51,14 +51,15 @@ def evaluate_acc(model, val_dataset):
         num_filled_correct += torch.sum(filled_correct)
 
         num_neg_ones_correct += torch.sum((target == -1)*filled)
-
-    print(f'average validation loss: {np.mean(loss_list)}')
-    print(f'accuracy: {num_correct/num_total:.4f}')
-    print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
-    print(f'accuracy if only -1: {num_neg_ones_correct/num_filled_total:.4f}')
+    if verbose:
+        if len(loss_list) > 0:
+            print(f'average validation loss: {np.mean(loss_list)}')
+        print(f'accuracy: {num_correct/num_total:.4f}')
+        print(f'accuracy on filled: {num_filled_correct/num_filled_total:.4f}')
+        print(f'accuracy if only -1: {num_neg_ones_correct/num_filled_total:.4f}')
     return num_filled_correct/num_filled_total if num_filled_total > 0 else 1
 
-def evaluate_outcome(model, dataset, val_dataset, is_function=False):
+def evaluate_outcome(model, dataset, val_dataset, is_function=False, verbose=True):
     budget = dataset.budget
     project_costs = torch.Tensor([p.cost for p in dataset.projects])
 
@@ -84,5 +85,6 @@ def evaluate_outcome(model, dataset, val_dataset, is_function=False):
     target_cost = sum([dataset.projects[id].cost for id in target_set])
     i_cost = sum([dataset.projects[id].cost for id in i])
 
-    print(f'Allocated same: {i_cost}/{target_cost}, ({i_cost/target_cost:.3f})')
+    if verbose:
+        print(f'Allocated same: {i_cost}/{target_cost}, ({i_cost/target_cost:.3f})')
     return i_cost/target_cost

@@ -1,6 +1,8 @@
 from train import *
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
+from synthdata import SynthDataLoader
 from baseline_completions import *
 
 def neg_1_model(x):
@@ -15,9 +17,13 @@ if __name__ == '__main__':
                         help='number of epochs to train for.')
     parser.add_argument('--repeats', '-r', type=int, default=10,
                         help='How often to repeat each experiment.')
+    parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
 
-    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0)
+    start = time.time()
+    # dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0)
+    dataset = SynthDataLoader(num_categories=5, num_voters=8000, num_projects=80, dropout=0, prior=0.75)
+    verbose=False
 
     dropouts = np.arange(0, 1, 0.05)
     model_accs = []
@@ -62,21 +68,24 @@ if __name__ == '__main__':
             train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
             model = AutoEncoder(dataset.n_projects, [54], 50)
             model.train()
-            train(model, train_dataset, epochs=args.epochs, batch_size=8, verbose = False, pc = None)
+            train(model, train_dataset, epochs=args.epochs, batch_size=256, verbose = verbose, pc = None, device=args.device, use_mask=True)
             model.eval()
 
-            m_accs.append(evaluate_acc(model, val_dataset))
-            m_outcomes.append(evaluate_outcome(model, dataset, val_dataset))
+            m_accs.append(evaluate_acc(model, val_dataset, verbose=verbose))
+            m_outcomes.append(evaluate_outcome(model, dataset, val_dataset, verbose=verbose))
 
             # partial_model = get_partial_model(train_dataset=train_dataset, nn_fraction=0.1)
-            b_accs.append(evaluate_acc(neg_1_model, val_dataset))
-            b_outcomes.append(evaluate_outcome(neg_1_model, dataset, val_dataset, is_function = True))
+            b_accs.append(evaluate_acc(neg_1_model, val_dataset, verbose=verbose))
+            b_outcomes.append(evaluate_outcome(neg_1_model, dataset, val_dataset, is_function = True, verbose=verbose))
 
         model_accs.append(np.mean(m_accs))
         model_outcomes.append(np.mean(m_outcomes))
         baseline_accs.append(np.mean(b_accs))
         baseline_outcomes.append(np.mean(b_outcomes))
 
+    end = time.time()
+    duration = end-start
+    print(f'Took {duration//60} minutes and {duration%60} seconds')
     fig, (ax1, ax2) = plt.subplots(2)
     plt.tight_layout()
 

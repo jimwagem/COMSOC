@@ -37,8 +37,8 @@ def train(model, train_dataset, epochs=5, batch_size=1, verbose = True, pc = Non
                 mask = 1 - torch.abs(x)
             else:
                 mask= torch.ones_like(x)
-            # loss = criterion(y*mask, target*mask)
-            loss = ballot_distance(y, target, L1=True, mask=mask, project_costs=pc)
+            loss = criterion(y*mask, target*mask)
+            # loss = ballot_distance(y, target, L1=True, mask=mask, project_costs=pc)
             # print(torch.sum(torch.max(torch.zeros(y.shape), y)).item(), torch.sum(torch.max(torch.zeros(y.shape), target)).item())
 
             # backward
@@ -62,17 +62,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
     start = time.time()
 
-    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = args.dropout)
-    # dataset = SynthDataLoader(num_categories=3, num_voters=8000, num_projects=80)
+    # dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = args.dropout)
+    dataset = SynthDataLoader(num_categories=5, num_voters=8000, num_projects=80, dropout=0.25)
     num_ballots = len(dataset)
     num_val = num_ballots//4
     num_train = num_ballots - num_val
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
-    model = AutoEncoder(dataset.n_projects, [100,100], 100)
+    model = AutoEncoder(dataset.n_projects, [54], 50)
     # pc = dataset.project_costs
     pc = None
-    train(model, train_dataset, epochs=args.epochs, batch_size=32, pc = pc, device=args.device, verbose=False, use_mask=False)
+    train(model, train_dataset, epochs=args.epochs, batch_size=32, pc = pc, device=args.device, verbose=True, use_mask=True)
 
     evaluate_acc(model, val_dataset)
     evaluate_outcome(model, dataset, val_dataset)
