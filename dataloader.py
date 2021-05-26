@@ -3,6 +3,7 @@ import pandas as pd
 import torch.utils.data as data
 import torch
 
+
 class Project():
     def __init__(self, line):
         words = line.split(';')
@@ -17,15 +18,16 @@ class Project():
     def __str__(self):
         return str(self.id) + ': ' + self.name
 
+
 class RealDataLoader(data.Dataset):
-    def __init__(self, filename, dropout = 0):
+    def __init__(self, filename, dropout=0):
         self.filename = filename
         self.dropout = dropout
         self.load_file()
 
     # Create x / target tensors from pabulib file
     def load_file(self):
-        mode = 0 # META / PROJECTS / VOTES
+        mode = 0  # META / PROJECTS / VOTES
         self.x = []
         self.targets = []
         self.projects = []
@@ -44,7 +46,7 @@ class RealDataLoader(data.Dataset):
                 elif line == 'VOTES':
                     mode = 2
                     counter = 0
-                elif len(line) > 6 and line[:6]=="budget":
+                elif len(line) > 6 and line[:6] == "budget":
                     self.budget = int(line[7:])
                 # Skip first line with labels
                 elif counter == 1:
@@ -72,6 +74,13 @@ class RealDataLoader(data.Dataset):
         self.n_projects = len(self.projects)
         self.project_costs = torch.Tensor(self.project_costs)
 
+    def to_listed_version(self, tensor):
+        tensor_list = []
+        for i in range(tensor.size(0)):
+            component_tensor = torch.clone(tensor[i])
+            tensor_list.append(component_tensor)
+        self.x_list = tensor_list
+
     def create_x_from_dropout(self):
         # Dropout some percent of x tensors
         # IDEA: Possibly have different dropout probabilities
@@ -81,6 +90,7 @@ class RealDataLoader(data.Dataset):
         ones = torch.ones(mask.shape)
         mask = torch.where(mask < self.dropout, zeros, ones)
         self.x = self.targets * mask
+        self.to_listed_version(self.x)
 
     def __getitem__(self, idx):
         return self.x[idx], self.targets[idx]
@@ -88,8 +98,9 @@ class RealDataLoader(data.Dataset):
     def __len__(self):
         return self.x.shape[0]
 
+
 if __name__ == '__main__':
-    rdl = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = 0.25)
+    rdl = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout=0.25)
     train_loader = data.DataLoader(rdl, batch_size=4)
     for x, target in train_loader:
         print(x)
