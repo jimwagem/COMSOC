@@ -63,24 +63,25 @@ class RealDataLoader(data.Dataset):
                         t[self.project_ids.index(int(vote))] = 1
                     self.targets.append(t)
 
-                    # Dropout some percent of x tensors
-                    # IDEA: Possibly have different dropout probabilities
-                    mask = torch.rand(len(self.projects))
-                    zeros = torch.zeros(len(self.projects))
-                    ones = torch.ones(len(self.projects))
-                    mask = torch.where(mask < self.dropout, zeros, ones)
-
-                    self.x.append(t * mask)
-
                 counter += 1
 
-        self.x_list = self.x
-        self.x = torch.stack(self.x)
         self.targets_list = self.targets
         self.targets = torch.stack(self.targets)
+        self.create_x_from_dropout()
+
         self.n_projects = len(self.projects)
         self.project_costs = torch.Tensor(self.project_costs)
-        
+
+    def create_x_from_dropout(self):
+        # Dropout some percent of x tensors
+        # IDEA: Possibly have different dropout probabilities
+
+        mask = torch.rand(self.targets.shape)
+        zeros = torch.zeros(mask.shape)
+        ones = torch.ones(mask.shape)
+        mask = torch.where(mask < self.dropout, zeros, ones)
+        self.x = self.targets * mask
+
     def __getitem__(self, idx):
         return self.x[idx], self.targets[idx]
 
