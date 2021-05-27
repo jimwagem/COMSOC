@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch.utils.data as data
 from dataloader import RealDataLoader
+from synthdata import SynthDataLoader
 from evaluation import evaluate_acc, evaluate_outcome
 
 class Conditional_plurality():
@@ -16,8 +17,9 @@ class Conditional_plurality():
         # matrix[x,b,y] is the sum of votes on project y, by people who voted b (0 for disapprove, 1 for approve) on project x
         self.matrix = torch.zeros(size=(self.n_projects, 2, self.n_projects))
 
-        ballots = [x for x, t in train_dataset]
-        for ballot in ballots:
+        for i, (ballot, _) in enumerate(train_dataset):
+            # if i%1000 == 0:
+            #     print('did 1000')
             for x, vote in enumerate(ballot):
                 if vote == 0:
                     continue
@@ -73,6 +75,7 @@ def validate_evaluation(dataset, use_costs=False):
     evaluate_outcome(model, dataset, val_dataset, is_function=True)
     
 if __name__=="__main__":
-    dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout=0.25)
+    # dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout=0.25)
+    dataset = SynthDataLoader(num_categories=5, num_voters=8000, num_projects=80, dropout=0.25, prior=0.6)
     validate_evaluation(dataset)
     

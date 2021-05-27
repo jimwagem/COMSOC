@@ -60,19 +60,19 @@ if __name__ == '__main__':
                         help='number of epochs to train for.')
     parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
-    start = time.time()
 
     # dataset = RealDataLoader('poland_warszawa_2019_ursynow.pb', dropout = args.dropout)
-    dataset = SynthDataLoader(num_categories=5, num_voters=8000, num_projects=80, dropout=0.25)
+    dataset = SynthDataLoader(num_categories=3, num_voters=8000, num_projects=80, dropout=0.25, prior=0.5)
     num_ballots = len(dataset)
     num_val = num_ballots//4
     num_train = num_ballots - num_val
+    start = time.time()
     train_dataset, val_dataset = data.random_split(dataset, [num_train ,num_val])
 
     model = AutoEncoder(dataset.n_projects, [54], 50)
     # pc = dataset.project_costs
     pc = None
-    train(model, train_dataset, epochs=args.epochs, batch_size=32, pc = pc, device=args.device, verbose=True, use_mask=True)
+    train(model, train_dataset, epochs=args.epochs, batch_size=256, pc = pc, device=args.device, verbose=True, use_mask=True)
 
     evaluate_acc(model, val_dataset)
     evaluate_outcome(model, dataset, val_dataset)

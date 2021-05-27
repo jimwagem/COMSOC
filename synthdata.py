@@ -22,15 +22,15 @@ class Voter():
         self.preferences = torch.rand(num_categories)
         self.num_categories = num_categories
     
-    def approve(self, project, num_samples=10, prior=0.5):
+    def approve(self, project, num_samples=11, prior=0.5):
         """A voter approves of a project if it agrees with the majority of categories"""
         proj_categories = project.categories
         agree_probs = proj_categories*self.preferences + (1-proj_categories)*(1-self.preferences)
 
-        # agreements = torch.bernoulli(agree_probs)
+        agreements = torch.bernoulli(agree_probs)
         agree_prob = torch.mean(agree_probs)
         agreements = torch.bernoulli(torch.stack(num_samples*[agree_prob]))
-        return torch.mean(agreements) >= 0.5
+        return torch.mean(agreements) >= prior
 
 
 class SynthDataLoader(data.Dataset):
